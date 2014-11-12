@@ -8,7 +8,6 @@ int main()
 	IplImage* frame;
 	capture = cvCreateFileCapture("codebook/tree.avi");
 
-
 	if(!capture)
 	{
 		std::cout << "Could not open capture" << std::endl;
