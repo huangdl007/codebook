@@ -118,21 +118,77 @@ int updateCodeBook(uchar *pixel, CB &cb)
 
 int clearCodeWord(CB &cb)
 {
-	return 0;
+	//keep the CW whose stale > sb.t/2
+	int threshold = cb.t / 2;
+	int *flag = new int[cb.numEntries];
+	int keepCount = 0;
+	for(int i=0; i<cb.numEntries; i++)
+	{
+		if(cb.cw[i]->stale > threshold)
+		{
+			flag[i] = 0;
+		}
+		else
+		{
+			flag[i] = 1;
+			keepCount++;
+		}
+	}
+
+	CW **newCWs = new CW*[keepCount];
+	cb.t = 0;
+	for(int i=0,  k=0; i<cb.numEntries; i++)
+	{
+		if(flag[i])
+		{
+			newCWs[k] = cb.cw[i];
+			newCWs[k]->stale = 0;
+			newCWs[k]->t_last = 0;
+			k++;
+		}
+	}
+
+	delete []flag;
+	delete []cb.cw;
+	cb.cw = newCWs;
+	int numCleared = cb.numEntries -keepCount;
+	cb.numEntries = keepCount;
+
+	return numCleared;
 }
+
 uchar getBackground(uchar *pixel, CB &cb)
 {
-	return 255;
+	int i, matchedChannels;
+	for(i=0; i<cb.numEntries; i++)
+	{
+		matchedChannels = 0;
+		for(int j=0; j<CHANNELS; j++)
+		{
+			if( (pixel[j] <= cb.cw[i]->max[j] + maxMod[j]) && (pixel[j] >= cb.cw[i]->min[j] - maxMod[j]) )
+				matchedChannels++;
+			else
+				break;
+		}
+
+		if(matchedChannels == CHANNELS)
+			break;
+	}
+
+	if(i == cb.numEntries)
+		return 255;
+
+	return 0;
 }
 int main()
 {
 	//declare variables
-	CvCapture* capture;
-	IplImage* rawFrame;
-	IplImage* CBFrame;
-	CB* cB;
-	int imageLength;
-	uchar* rawPixel;
+	CvCapture*		capture;
+	IplImage*		rawFrame;
+	IplImage*		CBFrame;
+	CB*				cB;
+	int				imageLength;
+	uchar*			rawPixel;
 
 	//initialize variables
 	capture = cvCreateFileCapture("codebook/tree.avi");
@@ -162,13 +218,19 @@ int main()
 	{
 		cB[i].numEntries = 0;
 	}
+
+
 	//process every frame of the video
 	for(int i=0; ;i++)
 	{
 		//learn the background with the first 30 frames
+		CvFont font;
+		cvInitFont(&font,CV_FONT_HERSHEY_SIMPLEX | CV_FONT_ITALIC,0.8,0.8,0,2);
+
 		if(i <= 30)
 		{
 			rawPixel = (uchar*)rawFrame->imageData;
+			//update codebook
 			for(int j=0; j<imageLength; j++)
 			{
 				updateCodeBook(rawPixel, cB[j]);
@@ -183,6 +245,8 @@ int main()
 					clearCodeWord(cB[k]);
 				}
 			}
+
+			cvPutText(CBFrame, "Learning Background", cvPoint(0, 100), &font, Scalar(0));
 		}
 		else
 		{
