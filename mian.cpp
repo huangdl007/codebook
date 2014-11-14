@@ -28,8 +28,6 @@ typedef struct CodeBook
 
 int updateCodeBook(uchar *pixel, CB &cb)
 {
-	if(cb.numEntries == 0)
-		cb.t = 0;
 	cb.t++;
 
 	//set high and low bound
@@ -45,10 +43,10 @@ int updateCodeBook(uchar *pixel, CB &cb)
 			low[i] = 0;
 	}
 
-	int i;
+	int i, matchedChannels;
 	for(i=0; i<cb.numEntries; i++)
 	{
-		int matchedChannels = 0;
+		matchedChannels = 0;
 		for(int j=0; j<CHANNELS; j++)
 		{
 			if(pixel[j] >= cb.cw[i]->ILow[j] && pixel[j] <= cb.cw[i]->IHigh[j])
@@ -73,8 +71,6 @@ int updateCodeBook(uchar *pixel, CB &cb)
 				if(cb.cw[i]->ILow[j] > low[j])
 					cb.cw[i]->ILow[j] -= 1;
 			}
-
-			//update bounds
 
 			break;
 		}
@@ -151,7 +147,7 @@ int clearCodeWord(CB &cb)
 	delete []flag;
 	delete []cb.cw;
 	cb.cw = newCWs;
-	int numCleared = cb.numEntries -keepCount;
+	int numCleared = cb.numEntries - keepCount;
 	cb.numEntries = keepCount;
 
 	return numCleared;
@@ -195,6 +191,7 @@ int main()
 	if(!capture)
 	{
 		std::cout << "Could not open capture" << std::endl;
+		return -1;
 	}
 
 	
@@ -217,6 +214,7 @@ int main()
 	for(int i=0; i<imageLength; i++)
 	{
 		cB[i].numEntries = 0;
+		cB[i].t = 0;
 	}
 
 
@@ -237,6 +235,8 @@ int main()
 				rawPixel += 3;	//3 channels image
 			}
 
+			cvPutText(CBFrame, "Learning Background", cvPoint(0, 100), &font, Scalar(0));
+
 			//clear code word
 			if(i == 30)
 			{
@@ -245,12 +245,10 @@ int main()
 					clearCodeWord(cB[k]);
 				}
 			}
-
-			cvPutText(CBFrame, "Learning Background", cvPoint(0, 100), &font, Scalar(0));
 		}
 		else
 		{
-			//build the codebook for the rest frame
+			//build the codebook for the rest frames
 			rawPixel = (uchar*)rawFrame->imageData;
 			uchar *CBPixel = (uchar*)CBFrame->imageData;
 			for(int j=0; j<imageLength; j++)
