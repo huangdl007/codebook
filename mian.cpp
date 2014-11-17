@@ -1,6 +1,7 @@
 #include <cv.h>           
 #include <highgui.h>
 #include <cxcore.h>
+#include <stdlib.h>
 
 using namespace cv;
 
@@ -198,7 +199,6 @@ int main()
 	rawFrame = cvQueryFrame(capture);
 	imageLength = rawFrame->height * rawFrame->width;
 	CBFrame = cvCreateImage(cvGetSize(rawFrame), IPL_DEPTH_8U, 1);
-	cvSet(CBFrame, Scalar(255));
 
 	cvNamedWindow("Raw Frame");
 	cvNamedWindow("CB");
@@ -224,7 +224,7 @@ int main()
 		//learn the background with the first 30 frames
 		CvFont font;
 		cvInitFont(&font,CV_FONT_HERSHEY_SIMPLEX | CV_FONT_ITALIC,0.8,0.8,0,2);
-
+		cvSet(CBFrame, Scalar(255));
 		if(i <= 30)
 		{
 			rawPixel = (uchar*)rawFrame->imageData;
@@ -235,7 +235,10 @@ int main()
 				rawPixel += 3;	//3 channels image
 			}
 
-			cvPutText(CBFrame, "Learning Background", cvPoint(0, 100), &font, Scalar(0));
+			char str[10];
+			itoa(i, str, 10);
+			string s = "Learning Background " + string(str);
+			cvPutText(CBFrame, s.c_str(), cvPoint(0, 100), &font, Scalar(0));
 
 			//clear code word
 			if(i == 30)
